@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Secure File Upload</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css">
+
+  <style>
+    body { padding: 40px; }
+    #uploadStatus { margin-top: 20px; }
+    .progress { display: none; margin-top: 20px; }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <h4 class="teal-text">ABC Ltd File Upload Portal</h4>
+
+    <div class="card">
+      <div class="card-content">
+        <span class="card-title">Upload a File</span>
+
+        <div class="file-field input-field">
+          <div class="btn teal">
+            <span>Select File</span>
+            <input type="file" id="fileInput">
+          </div>
+          <div class="file-path-wrapper">
+            <input class="file-path validate" type="text" placeholder="Upload your file">
+          </div>
+        </div>
+
+        <button class="btn waves-effect waves-light teal" onclick="uploadFile()">Upload</button>
+
+        <!-- Progress Bar -->
+        <div class="progress">
+          <div class="determinate" id="progressBar" style="width: 0%"></div>
+        </div>
+
+        <div id="uploadStatus"></div>
+      </div>
+    </div>
+  </div>
+
+<script>
+const API_ENDPOINT = "YOUR_API_GATEWAY_ENDPOINT_HERE"; // <-- Replace this
+
+async function uploadFile() {
+    const file = document.getElementById("fileInput").files[0];
+    if (!file) {
+        alert("Please select a file first.");
+        return;
+    }
+
+    document.getElementById("uploadStatus").innerHTML = "Requesting upload URL...";
+    document.querySelector(".progress").style.display = "block"; // Show bar
+    document.getElementById("progressBar").style.width = "0%";
+
+    // Step 1: Get Pre-signed URL
+    const response = await fetch(API_ENDPOINT, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ fileName: file.name })
+    });
+
+    const data = await response.json();
+    const uploadUrl = data.uploadUrl;
+
+    // Step 2: Upload File Using XMLHttpRequest (with progress tracking)
+    const xhr = new XMLHttpRequest();
+    xhr.open("PUT", uploadUrl, true);
+
+    xhr.upload.onprogress = function(event) {
+        if (event.lengthComputable) {
+            const percent = (event.loaded / event.total) * 100;
+            document.getElementById("progressBar").style.width = percent + "%";
+        }
+    };
+
+    xhr.onload = function() {
+        if (xhr.status === 200) {
+            document.getElementById("uploadStatus").innerHTML =
+              `<span class="green-text">✅ Upload Successful!</span><br>File Key: ${data.fileKey}`;
+        } else {
+            document.getElementById("uploadStatus").innerHTML =
+              `<span class="red-text">❌ Upload Failed!</span>`;
+        }
+    };
+
+    xhr.onerror = function() {
+        document.getElementById("uploadStatus").innerHTML =
+          `<span class="red-text">❌ Error uploading file.</span>`;
+    };
+
+    xhr.send(file);
+}
+</script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
+
+</body>
+</html>
